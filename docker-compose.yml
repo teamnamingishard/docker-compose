@@ -1,0 +1,16 @@
+version: '3'
+services:
+  nginx:
+    image: jwilder/nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    ports:
+      - 80:80
+      - 443:443
+
+  webserver:
+    build: /srv/server/
+    volumes:
+      - /srv/server/app:/app
+    environment:
+      - VIRTUAL_HOST=spy-stock.com
