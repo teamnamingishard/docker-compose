@@ -1,17 +1,38 @@
 version: '3'
 services:
-  nginx:
+  nginx-proxy:
+    container_name: nginx-proxy
     image: jwilder/nginx-proxy
     volumes:
+      - /srv/nginx/log:/var/log/nginx 
+      - /srv/nginx/certs:/etc/nginx/certs        
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - conf:/etc/nginx/conf.d
       - /var/run/docker.sock:/tmp/docker.sock:ro
     ports:
       - 80:80
       - 443:443
   
+  letsencrypt-nginx-proxy:
+    container_name: leten-nginx-proxy
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - /srv/nginx/certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always
+  
   frontend:
     image: node:latest
     environment:
       - VIRTUAL_HOST=${HOST}
+      - LETSENCRYPT_HOST=${HOST}
     volumes:
       - /srv/frontend/src:/app
     working_dir: /app
@@ -24,12 +45,19 @@ services:
     build: /srv/backend/
     environment:
       - VIRTUAL_HOST=api.${HOST}
+      - LETSENCRYPT_HOST=api.${HOST}
     restart: always
 
   webserver:
     build: /srv/server/
     environment:
       - VIRTUAL_HOST=back.${HOST}
+      - LETSENCRYPT_HOST=back.${HOST}
     volumes:
       - /srv/server/app:/app
     restart: always
+
+volumes:
+  html:
+  vhost:
+  conf:
